@@ -1,0 +1,112 @@
+﻿#Elaborado por: Maximiliano Hernández López
+#Matricula: 1922010
+#Fecha: 15/10/21
+
+#Funcion para mostrar el menu
+function Menu(){
+    write-host "1. Escaneo subred"
+    write-host "2. Escaneo puertos para un equipo"
+    write-host "3. Escaneo puertos todos los equipos"
+}
+
+
+function Escaneos(){
+    #Se determina el gateway  
+    $subred=(Get-NetRoute -DestinationPrefix 0.0.0.0/0).Nexhop
+    Write-Host "== Determinando tu gateway ..."
+    Write-Host "Tu gateway es: " $subred
+
+    $rango = $subred.Substring(0,$subred.IndexOf(',') + 1 + $subred.Substring($subred.IndexOf(',') + 1).IndexOf(',')+3)
+    Write-Host "== Determinando tu rango de subred"
+    echo $rango
+
+    $punto = $rango.EndsWith(',')
+    if ($punto -like "False")
+    {
+        $rango = $rango + '.'
+    }
+
+    #se analizan las subredes
+    $rango_ip=@(1..254)
+
+    Write-Output ""
+    Write-Host "-- Subred actual: "
+    Write-Host "Escaneando: " -NoNewLine ; Write-Host $rango - NoNewLine; Write-Host "0/24" -ForegroundColor Red
+    Write-Output ""
+
+    foreach($r in $rango_ip)
+    {
+        $actual = $rango + $r #Se genera dirección ip
+        $responde = Test-Connection $actual -Quiet -Count 1
+        if ($responde -eq "True")
+        {
+            Write-output ""
+            Write-Host "Host responde: " -NoNewLine; Write-Host $actual -ForegroundColor Green
+        }
+    }
+ }   
+
+ function puertos1(){      
+    #try{ $resultado = $TCPObject.ConnectAsync("10.0.0.19",139).Wait(100)}catch{}
+    #echo $resultado
+
+    $subred=(Get-NetRoute -DestinationPrefix 0.0.0.0/0).Nexhop
+    Write-Host "== Determinando tu gateway ..."
+    Write-Host "Tu gateway es: " $subred
+
+    $rango = $subred.Substring(0,$subred.IndexOf(',') + 1 + $subred.Substring($subred.IndexOf(',') + 1).IndexOf(',')+3)
+    Write-Host "== Determinando tu rango de subred"
+    echo $rango
+
+    $punto = $rango.EndWith('.')#se le añade un puntito al final del rango para asegurar que la estructura es correcta
+    if ($punto -like "False"){ #si no lleva punto se le obliga a ponerlo
+        $rango = $rango + '.'
+    }
+
+    $portscan = @(20,21,22,23,25,50,51,53,80,110,119,135,136,137,139,143,161,612,389,443,445,636,1025,1443,3389,5985,5986,8080,10000) #Se declaran los rangos más comunes
+    $waittime = 100 #se asigna un tiempo de espera de 100milisegundos
+
+    write-host "Direccion ip a escanear: " -NoNewline
+    $direccion = Read-host
+
+    foreach ($p in $portscan)#se recorre el arreglo de puertos
+    {
+        $TCPObject = new-object System.Net.Sockets.TcpClient #se congiura la conexion
+        try{ $resultado = $TCPObject.ConnectAsync($direccion,$p).Wait($waittime)}catch{} #manda pings para ver cuales estan abiertos y cuales no
+        if ($resultado -eq "True") #si hay un puerto abierto se imprime
+        {
+            Write-Host "Puerto abierto: " -NoNewline; Write-Host $p -ForegroundColor Cyan #aca se imprime
+        }
+    }
+}
+
+
+#function puertos2(){}
+
+
+Menu
+$opc = Read-Host  Elige una opcion
+
+while ($opc -lt 4){
+switch ($opc){
+    1 {
+    Escaneos
+    Menu
+    $opc = Read-Host  Elige una opcion
+    break
+    } 2 {
+    puertos1
+    Menu
+    $opc = Read-Host  Elige una opcion
+    break
+    } 3 {
+    puertos2
+    Menu
+    $opc = Read-Host  Elige una opcion
+    break
+    } default {
+    write-Host "Error 502 (Opcion no valida)" 
+}
+}
+$opc = Read-Host  Elige una opcion
+}
